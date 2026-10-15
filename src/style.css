@@ -1,0 +1,30 @@
+:root { color-scheme: dark; font-family: ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif; background: #081827; }
+* { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
+body { background: radial-gradient(circle at 50% 20%, #254f6b 0, #0b2134 58%, #07131e 100%); touch-action: none; user-select: none; }
+#app { width: 100%; height: 100%; display: grid; place-items: center; padding: 8px; }
+.game-shell { position: relative; aspect-ratio: 9 / 16; height: min(calc(100dvh - 16px), 840px); max-width: calc(100vw - 16px); overflow: hidden; border-radius: clamp(12px, 2.4vh, 24px); box-shadow: 0 26px 80px #0009, inset 0 0 0 1px #fff4; background: #66cee7; isolation: isolate; }
+canvas { display: block; width: 100%; height: 100%; outline: none; cursor: pointer; touch-action: none; }
+.hud { position: absolute; z-index: 2; inset: 2.3% 5% auto; display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; text-align: center; color: #fff; filter: drop-shadow(0 2px 0 #13344c); pointer-events: none; }
+.hud > div:first-child { text-align: left; }.hud > div:last-child { text-align: right; }
+.hud .label { display: block; font-size: clamp(7px, 1.35vh, 11px); letter-spacing: .16em; color: #d7f7ff; }
+.hud strong { font-size: clamp(18px, 4vh, 32px); line-height: 1; }
+.brand { font-size: clamp(10px, 1.8vh, 15px); line-height: .86; letter-spacing: .09em; transform: rotate(-2deg); }
+.brand b { color: #ffd94a; font-size: 1.42em; -webkit-text-stroke: 1px #7c4e12; }
+.message { position: absolute; z-index: 3; left: 9%; right: 9%; top: 27%; padding: 8% 7%; border: 1px solid #fff6; border-radius: 20px; text-align: center; color: #12324a; background: linear-gradient(145deg, #fffef2f5, #dff9fff0); box-shadow: 0 14px 0 #163b5370, 0 24px 50px #09223675; backdrop-filter: blur(8px); }
+.message .eyebrow { margin: 0 0 4%; font-size: clamp(7px, 1.25vh, 10px); letter-spacing: .2em; color: #47809a; }
+h1 { margin: 0; font-size: clamp(28px, 6vh, 48px); line-height: .96; letter-spacing: -.055em; }
+.message p:not(.eyebrow) { margin: 6% 0 8%; font-size: clamp(9px, 1.7vh, 14px); line-height: 1.35; color: #4a6878; }
+button { border: 0; font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.primary { min-width: 72%; padding: 4.5% 9%; border-radius: 999px; color: #203309; background: linear-gradient(#fff06b, #f4b82b); box-shadow: 0 5px 0 #9b6b16, inset 0 2px #fff9; text-transform: uppercase; font-size: clamp(10px, 1.9vh, 15px); font-weight: 900; letter-spacing: .06em; }
+.primary:active { transform: translateY(3px); box-shadow: 0 2px 0 #9b6b16; }
+.countdown { position: absolute; z-index: 4; inset: 37% 0 auto; text-align: center; color: #fff; font-size: clamp(70px, 17vh, 140px); font-weight: 900; line-height: 1; -webkit-text-stroke: 3px #16384e; filter: drop-shadow(0 6px 0 #10283c80); pointer-events: none; }
+.controls { position: absolute; z-index: 5; top: 10%; right: 4%; display: flex; gap: 5px; }
+.controls button { display: grid; place-items: center; width: clamp(27px, 5.2vh, 42px); aspect-ratio: 1; border: 1px solid #fff7; border-radius: 50%; color: #fff; background: #123a5488; font-size: clamp(12px, 2.4vh, 19px); box-shadow: 0 3px 8px #06203355; }
+.instructions { position: absolute; z-index: 2; left: 0; right: 0; bottom: 1.1%; margin: 0; text-align: center; color: #fff; text-shadow: 0 2px 2px #263810; font-size: clamp(7px, 1.25vh, 10px); letter-spacing: .03em; pointer-events: none; }
+kbd { padding: .15em .45em; border: 1px solid #fff8; border-radius: 4px; background: #14364c99; font: inherit; font-weight: 900; }
+#app[data-state="playing"] .message, #app[data-state="countdown"] .message { display: none; }
+#app[data-state="ready"] #pause-button, #app[data-state="countdown"] #pause-button, #app[data-state="gameover"] #pause-button { visibility: hidden; }
+#app[data-state="playing"] .countdown, #app[data-state="ready"] .countdown, #app[data-state="gameover"] .countdown { display: none; }
+@media (max-height: 440px) { #app { padding: 4px; } .game-shell { height: calc(100dvh - 8px); } .instructions { display: none; } .controls { top: 12%; } }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }

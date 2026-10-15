@@ -1,0 +1,1 @@
+{"name":"flappy-bird","version":"1.0.0","private":true,"type":"module","scripts":{"test":"vitest run","test:e2e":"playwright test","dev":"node scripts/server.mjs"},"devDependencies":{"@playwright/test":"^1.56.0","vitest":"^5.0.5"}}
