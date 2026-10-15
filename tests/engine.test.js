@@ -58,6 +58,15 @@ describe('collisions and lifecycle', () => {
     const g = active(); g.pause(); const y = g.bird.y; g.advance(2); expect(g.bird.y).toBe(y); expect(g.state).toBe('paused');
     g.resume(); expect(g.state).toBe('playing'); g.advance(0.1); expect(g.bird.y).not.toBe(y);
   });
+  it('freezes and resumes the launch countdown without skipping time', () => {
+    const g = new Game();
+    g.start(); g.advance(1.25); g.pause();
+    const remaining = g.countdown;
+    g.advance(2);
+    expect(g.countdown).toBe(remaining);
+    g.resume(); g.advance(remaining);
+    expect(g.state).toBe('playing');
+  });
   it('restart clears run data and starts a fresh countdown', () => {
     const g = active(); g.score = 9; g.pipes.push({}); g.gameOver(); g.restart();
     expect(g.state).toBe('countdown'); expect(g.score).toBe(0); expect(g.pipes).toEqual([]); expect(g.countdown).toBe(3);
@@ -79,5 +88,13 @@ describe('persistence', () => {
     const values = []; expect(saveHighScore({ setItem: (k, v) => values.push([k, v]) }, 8)).toBe(true);
     expect(values).toEqual([['flappy-high-score', '8']]);
     expect(saveHighScore({ setItem: () => { throw Error('full'); } }, 8)).toBe(false);
+  });
+  it('never stores non-finite or negative best scores', () => {
+    const values = [];
+    const storage = { setItem: (_key, value) => values.push(value) };
+    saveHighScore(storage, Number.POSITIVE_INFINITY);
+    saveHighScore(storage, Number.NaN);
+    saveHighScore(storage, -4);
+    expect(values).toEqual(['0', '0', '0']);
   });
 });

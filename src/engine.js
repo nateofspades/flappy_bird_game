@@ -15,7 +15,8 @@ export function loadHighScore(storage) {
 }
 
 export function saveHighScore(storage, value) {
-  try { storage?.setItem(SCORE_KEY, String(Math.max(0, Math.floor(value)))); return true; }
+  const score = Number.isFinite(Number(value)) ? Math.max(0, Math.floor(Number(value))) : 0;
+  try { storage?.setItem(SCORE_KEY, String(score)); return true; }
   catch { return false; }
 }
 
