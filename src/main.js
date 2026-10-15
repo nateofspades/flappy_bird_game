@@ -1,4 +1,5 @@
 import { Game, CONFIG, loadHighScore, saveHighScore } from './engine.js';
+import { Music } from './music.js';
 
 const app = document.querySelector('#app');
 const canvas = document.querySelector('#game');
@@ -9,45 +10,12 @@ const titleEl = document.querySelector('#message-title');
 const copyEl = document.querySelector('#message-copy');
 const actionButton = document.querySelector('#start-button');
 const pauseButton = document.querySelector('#pause-button');
-const soundButton = document.querySelector('#sound-button');
+const musicButton = document.querySelector('#music-button');
 const countdownEl = document.querySelector('#countdown');
 
-class Sounds {
-  constructor() { this.enabled = true; this.context = null; }
-  unlock() {
-    if (!this.enabled) return;
-    try {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (AudioContext && !this.context) this.context = new AudioContext();
-      const resumed = this.context?.resume?.();
-      resumed?.catch?.(() => {});
-    } catch { this.context = null; }
-  }
-  play(type) {
-    if (!this.enabled) return;
-    this.unlock();
-    if (!this.context) return;
-    try {
-      const now = this.context.currentTime;
-      const oscillator = this.context.createOscillator();
-      const gain = this.context.createGain();
-      const notes = { flap: [520, .055], point: [880, .1], hit: [145, .2], start: [390, .08] };
-      const [frequency, length] = notes[type] || notes.flap;
-      oscillator.type = type === 'hit' ? 'sawtooth' : 'sine';
-      oscillator.frequency.setValueAtTime(frequency, now);
-      if (type === 'point') oscillator.frequency.exponentialRampToValueAtTime(1250, now + length);
-      gain.gain.setValueAtTime(.0001, now);
-      gain.gain.exponentialRampToValueAtTime(.13, now + .008);
-      gain.gain.exponentialRampToValueAtTime(.0001, now + length);
-      oscillator.connect(gain).connect(this.context.destination);
-      oscillator.start(now); oscillator.stop(now + length + .01);
-    } catch { this.context = null; }
-  }
-}
-
-const sounds = new Sounds();
 function getStorage() { try { return window.localStorage; } catch { return null; } }
 const storage = getStorage();
+const music = new Music({ storage });
 const game = new Game({
   highScore: loadHighScore(storage),
   onHighScore: value => saveHighScore(storage, value),
@@ -166,8 +134,15 @@ function updateUi() {
 
 function render() { draw(); updateUi(); }
 
+function updateMusicUi() {
+  musicButton.textContent = music.enabled ? 'Music On' : 'Music Off';
+  musicButton.setAttribute('aria-pressed', String(music.enabled));
+  musicButton.setAttribute('aria-label', music.enabled ? 'Turn music off' : 'Turn music on');
+  musicButton.title = music.enabled ? 'Turn music off' : 'Turn music on';
+}
+
 function begin() {
-  sounds.unlock(); sounds.play('start');
+  void music.startFromInteraction();
   if (game.state === 'paused') game.resume();
   else if (game.state === 'gameover') game.restart();
   else game.start();
@@ -176,25 +151,30 @@ function begin() {
 }
 
 function flapOrStart() {
-  sounds.unlock();
-  if (game.state === 'playing') { game.flap(); sounds.play('flap'); }
+  void music.startFromInteraction();
+  if (game.state === 'playing') game.flap();
   else if (game.state === 'ready' || game.state === 'gameover') begin();
 }
 
 actionButton.addEventListener('click', begin);
-pauseButton.addEventListener('click', () => { game.state === 'paused' ? game.resume() : game.pause(); render(); });
-soundButton.addEventListener('click', () => {
-  sounds.enabled = !sounds.enabled; if (sounds.enabled) sounds.unlock();
-  soundButton.textContent = sounds.enabled ? '♪' : '×';
-  soundButton.setAttribute('aria-pressed', String(sounds.enabled));
-  soundButton.setAttribute('aria-label', sounds.enabled ? 'Mute sound' : 'Enable sound');
+pauseButton.addEventListener('click', () => {
+  void music.startFromInteraction();
+  game.state === 'paused' ? game.resume() : game.pause();
+  render();
+});
+musicButton.addEventListener('click', async () => {
+  await music.setEnabled(!music.enabled);
+  updateMusicUi();
 });
 canvas.addEventListener('pointerdown', event => { event.preventDefault(); flapOrStart(); });
 window.addEventListener('keydown', event => {
   if (event.code === 'Space') { event.preventDefault(); flapOrStart(); }
   if (event.code === 'KeyP' && (game.state === 'playing' || game.state === 'paused')) { game.state === 'paused' ? game.resume() : game.pause(); render(); }
 });
-function handleVisibility(forceHidden = document.hidden) { if (forceHidden && (game.state === 'playing' || game.state === 'countdown')) { game.pause(); render(); } }
+function handleVisibility(forceHidden = document.hidden) {
+  void music.handleVisibility(forceHidden);
+  if (forceHidden && (game.state === 'playing' || game.state === 'countdown')) { game.pause(); render(); }
+}
 document.addEventListener('visibilitychange', () => handleVisibility());
 
 let previous = performance.now();
@@ -202,14 +182,14 @@ function frame(now) {
   const dt = Math.min(.05, (now - previous) / 1000); previous = now;
   if (!testMode && (game.state === 'playing' || game.state === 'countdown')) {
     visualTime += dt;
-    const beforeState = game.state, beforeScore = game.score;
     game.advance(dt);
-    if (game.score > beforeScore) sounds.play('point');
-    if (game.state === 'gameover' && beforeState !== 'gameover') sounds.play('hit');
     render();
   }
   requestAnimationFrame(frame);
 }
 
-window.__flappy = { game, render, handleVisibility, get dimensions() { return { cssWidth, cssHeight }; } };
-render(); requestAnimationFrame(frame);
+window.__flappy = {
+  game, music, render, handleVisibility,
+  get dimensions() { return { cssWidth, cssHeight }; },
+};
+updateMusicUi(); render(); requestAnimationFrame(frame);

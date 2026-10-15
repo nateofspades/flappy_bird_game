@@ -20,7 +20,8 @@ button { border: 0; font: inherit; cursor: pointer; -webkit-tap-highlight-color:
 .primary:active { transform: translateY(3px); box-shadow: 0 2px 0 #9b6b16; }
 .countdown { position: absolute; z-index: 4; inset: 37% 0 auto; text-align: center; color: #fff; font-size: clamp(70px, 17vh, 140px); font-weight: 900; line-height: 1; -webkit-text-stroke: 3px #16384e; filter: drop-shadow(0 6px 0 #10283c80); pointer-events: none; }
 .controls { position: absolute; z-index: 5; top: 10%; right: 4%; display: flex; gap: 5px; }
-.controls button { display: grid; place-items: center; width: clamp(27px, 5.2vh, 42px); aspect-ratio: 1; border: 1px solid #fff7; border-radius: 50%; color: #fff; background: #123a5488; font-size: clamp(12px, 2.4vh, 19px); box-shadow: 0 3px 8px #06203355; }
+.controls button { display: grid; place-items: center; min-width: clamp(27px, 5.2vh, 42px); height: clamp(27px, 5.2vh, 42px); padding: 0 .5em; border: 1px solid #fff7; border-radius: 999px; color: #fff; background: #123a54cc; font-size: clamp(10px, 1.8vh, 14px); font-weight: 800; box-shadow: 0 3px 8px #06203355; }
+.controls .music-toggle { min-width: clamp(64px, 11vh, 88px); }
 .instructions { position: absolute; z-index: 2; left: 0; right: 0; bottom: 1.1%; margin: 0; text-align: center; color: #fff; text-shadow: 0 2px 2px #263810; font-size: clamp(7px, 1.25vh, 10px); letter-spacing: .03em; pointer-events: none; }
 kbd { padding: .15em .45em; border: 1px solid #fff8; border-radius: 4px; background: #14364c99; font: inherit; font-weight: 900; }
 #app[data-state="playing"] .message, #app[data-state="countdown"] .message { display: none; }
