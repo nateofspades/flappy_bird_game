@@ -57,10 +57,20 @@ export class Music {
     }
     if (!this.context && !this.createAudioGraph()) return false;
     try { await this.context.resume?.(); } catch { return false; }
-    this.schedule();
-    if (this.timer === null) this.timer = this.setInterval(() => this.schedule(), 50);
+    if (!this.safeSchedule()) return false;
+    if (this.timer === null) this.timer = this.setInterval(() => this.safeSchedule(), 50);
     this.started = true;
     return true;
+  }
+
+  safeSchedule() {
+    try {
+      this.schedule();
+      return true;
+    } catch {
+      this.started = false;
+      return false;
+    }
   }
 
   async setEnabled(enabled) {

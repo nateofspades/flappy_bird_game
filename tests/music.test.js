@@ -125,6 +125,27 @@ describe('music lifecycle', () => {
     expect(music.step).toBeGreaterThanOrEqual(phraseStep);
     expect(music.started).toBe(true);
   });
+
+  it('contains partial WebAudio failures instead of rejecting the player interaction', async () => {
+    const harness = audioHarness();
+    harness.createContext = () => {
+      const context = {
+        currentTime: 0,
+        state: 'suspended',
+        destination: {},
+        resume: vi.fn(async () => { context.state = 'running'; }),
+        createGain: vi.fn(() => ({ gain: { value: 0, setValueAtTime(value) { this.value = value; } }, connect: vi.fn() })),
+        createOscillator: vi.fn(() => { throw new Error('device lost'); }),
+      };
+      harness.contexts.push(context);
+      return context;
+    };
+    const music = new Music(harness);
+
+    await expect(music.startFromInteraction()).resolves.toBe(false);
+    expect(music.started).toBe(false);
+    expect(harness.timers.size).toBe(0);
+  });
 });
 
 describe('sound design boundary', () => {
