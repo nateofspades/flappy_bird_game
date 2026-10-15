@@ -53,6 +53,17 @@ describe('music preference', () => {
 });
 
 describe('music lifecycle', () => {
+  it('treats enabling music from the toggle as the first audio interaction', async () => {
+    const harness = audioHarness();
+    const music = new Music({ ...harness, enabled: false });
+
+    await music.setEnabled(true);
+
+    expect(music.interacted).toBe(true);
+    expect(music.started).toBe(true);
+    expect(harness.contexts).toHaveLength(1);
+  });
+
   it('creates and schedules one composition after the first interaction only', async () => {
     const harness = audioHarness();
     const music = new Music(harness);
@@ -124,6 +135,21 @@ describe('music lifecycle', () => {
     expect(harness.timers.size).toBe(1);
     expect(music.step).toBeGreaterThanOrEqual(phraseStep);
     expect(music.started).toBe(true);
+  });
+
+  it('skips expired phrase steps after a long main-thread stall', async () => {
+    const harness = audioHarness();
+    const music = new Music(harness);
+    await music.startFromInteraction();
+    const context = music.context;
+    const notesBeforeStall = context.createOscillator.mock.calls.length;
+
+    context.currentTime += 30;
+    music.safeSchedule();
+
+    const notesAfterStall = context.createOscillator.mock.calls.length - notesBeforeStall;
+    expect(notesAfterStall).toBeLessThanOrEqual(4);
+    expect(music.nextStepAt).toBeGreaterThanOrEqual(context.currentTime);
   });
 
   it('contains partial WebAudio failures instead of rejecting the player interaction', async () => {

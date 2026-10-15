@@ -74,6 +74,7 @@ export class Music {
   }
 
   async setEnabled(enabled) {
+    this.interacted = true;
     this.enabled = Boolean(enabled);
     saveMusicPreference(this.storage, this.enabled);
     if (this.master && this.context) {
@@ -129,7 +130,13 @@ export class Music {
 
   schedule() {
     if (!this.context || !this.master) return;
-    const horizon = this.context.currentTime + LOOK_AHEAD_SECONDS;
+    const now = this.context.currentTime;
+    if (this.nextStepAt < now) {
+      const missedSteps = Math.ceil((now - this.nextStepAt) / STEP_SECONDS);
+      this.step = (this.step + missedSteps) % MELODY.length;
+      this.nextStepAt += missedSteps * STEP_SECONDS;
+    }
+    const horizon = now + LOOK_AHEAD_SECONDS;
     while (this.nextStepAt < horizon) {
       const melodyNote = MELODY[this.step % MELODY.length];
       this.playNote(melodyNote, this.nextStepAt, STEP_SECONDS * 0.72, 0.34);

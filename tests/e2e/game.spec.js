@@ -132,11 +132,15 @@ test('music toggle persists and starts later without duplicate instances', async
 
   await page.reload();
   await expect(page.getByRole('button', { name: 'Turn music on' })).toHaveText('Music Off');
-  await page.getByRole('button', { name: 'Start game' }).click();
   expect(await page.evaluate(() => window.__flappy.music.context)).toBeNull();
   await page.getByRole('button', { name: 'Turn music on' }).click();
   await expect.poll(() => page.evaluate(() => window.__flappy.music.started)).toBe(true);
   expect(await page.evaluate(() => localStorage.getItem('flappy-music-enabled'))).toBe('on');
+
+  await page.getByRole('button', { name: 'Turn music off' }).click();
+  await page.reload();
+  await page.getByRole('button', { name: 'Start game' }).click();
+  expect(await page.evaluate(() => window.__flappy.music.context)).toBeNull();
 });
 
 test('visibility and browser audio interruptions resume the same loop', async ({ page }) => {
