@@ -1,6 +1,6 @@
 # Flappy Bird
 
-**Live game:** https://nateofspades.github.io/flappy_bird_game/
+**Play now:** https://nateofspades.github.io/flappy_bird_game/
 
 ![Flappy Bird gameplay with the Music On control](assets/screenshots/gameplay.png)
 
