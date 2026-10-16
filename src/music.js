@@ -1,4 +1,5 @@
 export const MUSIC_PREFERENCE_KEY = 'flappy-music-enabled';
+export const MASTER_MUSIC_VOLUME = 0.28;
 
 // "Skyline Skip" — an original 32-step C-major WebAudio loop composed for this game.
 const MELODY = [72, 76, 79, 76, 74, 77, 81, 77, 72, 76, 79, 83, 81, 79, 77, 74,
@@ -56,7 +57,10 @@ export class Music {
       this.started = false;
     }
     if (!this.context && !this.createAudioGraph()) return false;
-    try { await this.context.resume?.(); } catch { return false; }
+    try {
+      await this.context.resume?.();
+      this.master.gain.setValueAtTime(this.enabled ? MASTER_MUSIC_VOLUME : 0, this.context.currentTime);
+    } catch { return false; }
     if (!this.safeSchedule()) return false;
     if (this.timer === null) this.timer = this.setInterval(() => this.safeSchedule(), 50);
     this.started = true;
@@ -78,7 +82,7 @@ export class Music {
     this.enabled = Boolean(enabled);
     saveMusicPreference(this.storage, this.enabled);
     if (this.master && this.context) {
-      this.master.gain.setValueAtTime(this.enabled ? 0.16 : 0, this.context.currentTime);
+      this.master.gain.setValueAtTime(this.enabled ? MASTER_MUSIC_VOLUME : 0, this.context.currentTime);
     }
     if (this.enabled && this.interacted) return this.startFromInteraction();
     return this.enabled;
@@ -103,7 +107,7 @@ export class Music {
       this.context = this.createContext();
       if (!this.context) return false;
       this.master = this.context.createGain();
-      this.master.gain.setValueAtTime(this.enabled ? 0.16 : 0, this.context.currentTime);
+      this.master.gain.setValueAtTime(this.enabled ? MASTER_MUSIC_VOLUME : 0, this.context.currentTime);
       this.master.connect(this.context.destination);
       this.nextStepAt = this.context.currentTime + 0.03;
       return true;

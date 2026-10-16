@@ -1,6 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
-import { Music, MUSIC_PREFERENCE_KEY, loadMusicPreference, saveMusicPreference } from '../src/music.js';
+import {
+  MASTER_MUSIC_VOLUME,
+  Music,
+  MUSIC_PREFERENCE_KEY,
+  loadMusicPreference,
+  saveMusicPreference,
+} from '../src/music.js';
 
 function audioHarness() {
   const timers = new Map();
@@ -53,6 +59,16 @@ describe('music preference', () => {
 });
 
 describe('music lifecycle', () => {
+  it('creates the audio graph at the central master music volume', async () => {
+    const harness = audioHarness();
+    const music = new Music(harness);
+
+    await music.startFromInteraction();
+
+    expect(MASTER_MUSIC_VOLUME).toBe(0.28);
+    expect(music.master.gain.value).toBe(MASTER_MUSIC_VOLUME);
+  });
+
   it('treats enabling music from the toggle as the first audio interaction', async () => {
     const harness = audioHarness();
     const music = new Music({ ...harness, enabled: false });
@@ -95,7 +111,7 @@ describe('music lifecycle', () => {
     expect(context.currentTime).toBe(position);
 
     await music.setEnabled(true);
-    expect(music.master.gain.value).toBe(0.16);
+    expect(music.master.gain.value).toBe(MASTER_MUSIC_VOLUME);
     expect(music.context).toBe(context);
     expect(harness.contexts).toHaveLength(1);
     expect(writes).toEqual([
@@ -112,14 +128,33 @@ describe('music lifecycle', () => {
 
     await music.handleVisibility(true);
     expect(context.suspend).toHaveBeenCalledTimes(1);
+    music.master.gain.value = 0.01;
     await music.handleVisibility(false);
     expect(context.resume).toHaveBeenCalledTimes(2);
+    expect(music.master.gain.value).toBe(MASTER_MUSIC_VOLUME);
     expect(music.context).toBe(context);
     expect(harness.contexts).toHaveLength(1);
 
     await music.setEnabled(false);
     await music.handleVisibility(false);
     expect(context.resume).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the master muted when music is disabled during an audio resume', async () => {
+    const harness = audioHarness();
+    const music = new Music(harness);
+    let finishResume;
+    const resumePending = new Promise(resolve => { finishResume = resolve; });
+    music.createAudioGraph();
+    music.context.resume = vi.fn(() => resumePending);
+
+    const start = music.startFromInteraction();
+    await music.setEnabled(false);
+    finishResume();
+    await start;
+
+    expect(music.enabled).toBe(false);
+    expect(music.master.gain.value).toBe(0);
   });
 
   it('recovers a closed audio context without duplicating the scheduler or restarting the phrase', async () => {
@@ -133,6 +168,7 @@ describe('music lifecycle', () => {
 
     expect(harness.contexts).toHaveLength(2);
     expect(harness.timers.size).toBe(1);
+    expect(music.master.gain.value).toBe(MASTER_MUSIC_VOLUME);
     expect(music.step).toBeGreaterThanOrEqual(phraseStep);
     expect(music.started).toBe(true);
   });

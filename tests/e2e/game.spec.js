@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { MASTER_MUSIC_VOLUME } from '../../src/music.js';
 
 const viewports = [
   [1920, 1080],
@@ -114,6 +115,14 @@ test('touch starts, flaps, and leaves the mobile page fixed', async ({ browser, 
   expect(await page.evaluate(() => window.__flappy.game.bird.vy)).toBeLessThan(0);
   expect(await page.evaluate(() => ({ x: scrollX, y: scrollY }))).toEqual({ x: 0, y: 0 });
   await expect.poll(() => page.evaluate(() => window.__flappy.music.started)).toBe(true);
+  expect(await page.evaluate(() => window.__flappy.music.master.gain.value)).toBeCloseTo(MASTER_MUSIC_VOLUME);
+
+  const musicOff = await page.getByRole('button', { name: 'Turn music off' }).boundingBox();
+  await page.touchscreen.tap(musicOff.x + musicOff.width / 2, musicOff.y + musicOff.height / 2);
+  expect(await page.evaluate(() => window.__flappy.music.master.gain.value)).toBe(0);
+  const musicOn = await page.getByRole('button', { name: 'Turn music on' }).boundingBox();
+  await page.touchscreen.tap(musicOn.x + musicOn.width / 2, musicOn.y + musicOn.height / 2);
+  await expect.poll(() => page.evaluate(() => window.__flappy.music.master.gain.value)).toBeCloseTo(MASTER_MUSIC_VOLUME);
   expect(runtime.errors).toEqual([]);
   expect(runtime.failures).toEqual([]);
   await context.close();
@@ -123,12 +132,14 @@ test('music toggle persists and starts later without duplicate instances', async
   await page.goto('/?test=1');
   await begin(page);
   await page.evaluate(() => { window.__musicContext = window.__flappy.music.context; });
+  expect(await page.evaluate(() => window.__flappy.music.master.gain.value)).toBeCloseTo(MASTER_MUSIC_VOLUME);
 
   await page.getByRole('button', { name: 'Turn music off' }).click();
   await expect(page.getByRole('button', { name: 'Turn music on' })).toHaveText('Music Off');
   await expect(page.getByRole('button', { name: 'Turn music on' })).toHaveAttribute('aria-pressed', 'false');
   expect(await page.evaluate(() => localStorage.getItem('flappy-music-enabled'))).toBe('off');
   expect(await page.evaluate(() => window.__flappy.music.context === window.__musicContext)).toBe(true);
+  expect(await page.evaluate(() => window.__flappy.music.master.gain.value)).toBe(0);
 
   await page.reload();
   await expect(page.getByRole('button', { name: 'Turn music on' })).toHaveText('Music Off');
@@ -136,6 +147,7 @@ test('music toggle persists and starts later without duplicate instances', async
   await page.getByRole('button', { name: 'Turn music on' }).click();
   await expect.poll(() => page.evaluate(() => window.__flappy.music.started)).toBe(true);
   expect(await page.evaluate(() => localStorage.getItem('flappy-music-enabled'))).toBe('on');
+  expect(await page.evaluate(() => window.__flappy.music.master.gain.value)).toBeCloseTo(MASTER_MUSIC_VOLUME);
 
   await page.getByRole('button', { name: 'Turn music off' }).click();
   await page.reload();
