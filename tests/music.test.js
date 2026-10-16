@@ -65,7 +65,7 @@ describe('music lifecycle', () => {
 
     await music.startFromInteraction();
 
-    expect(MASTER_MUSIC_VOLUME).toBe(0.28);
+    expect(MASTER_MUSIC_VOLUME).toBe(0.50);
     expect(music.master.gain.value).toBe(MASTER_MUSIC_VOLUME);
   });
 
@@ -120,6 +120,43 @@ describe('music lifecycle', () => {
     ]);
   });
 
+  it('pauses and resumes the same transport without changing the music preference', async () => {
+    const harness = audioHarness();
+    const writes = [];
+    const music = new Music({ ...harness, storage: { setItem: (key, value) => writes.push([key, value]) } });
+    await music.startFromInteraction();
+    const context = music.context;
+    const timer = music.timer;
+    const position = context.currentTime;
+
+    await music.setPaused(true);
+    expect(context.state).toBe('suspended');
+    expect(context.currentTime).toBe(position);
+
+    await music.setPaused(false);
+    expect(context.state).toBe('running');
+    expect(music.context).toBe(context);
+    expect(music.timer).toBe(timer);
+    expect(harness.contexts).toHaveLength(1);
+    expect(music.master.gain.value).toBe(MASTER_MUSIC_VOLUME);
+    expect(writes).toEqual([]);
+  });
+
+  it('starts enabled music on resume when it was turned on during a pause', async () => {
+    const harness = audioHarness();
+    const music = new Music({ ...harness, enabled: false });
+    await music.startFromInteraction();
+    await music.setPaused(true);
+
+    await music.setEnabled(true);
+    expect(music.context).toBeNull();
+
+    await music.setPaused(false);
+    expect(harness.contexts).toHaveLength(1);
+    expect(music.context.state).toBe('running');
+    expect(music.master.gain.value).toBe(MASTER_MUSIC_VOLUME);
+  });
+
   it('suspends for visibility loss and resumes the same context when visible', async () => {
     const harness = audioHarness();
     const music = new Music(harness);
@@ -138,6 +175,32 @@ describe('music lifecycle', () => {
     await music.setEnabled(false);
     await music.handleVisibility(false);
     expect(context.resume).toHaveBeenCalledTimes(2);
+  });
+
+  it('stays suspended when visibility returns while the game is paused', async () => {
+    const harness = audioHarness();
+    const music = new Music(harness);
+    await music.startFromInteraction();
+
+    await music.setPaused(true);
+    await music.handleVisibility(true);
+    await music.handleVisibility(false);
+
+    expect(music.context.state).toBe('suspended');
+    expect(music.context.resume).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not restart audio from an interaction while the document is hidden', async () => {
+    const harness = audioHarness();
+    const music = new Music(harness);
+    await music.startFromInteraction();
+    await music.handleVisibility(true);
+
+    const resumed = await music.startFromInteraction();
+
+    expect(resumed).toBe(false);
+    expect(music.context.state).toBe('suspended');
+    expect(music.context.resume).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the master muted when music is disabled during an audio resume', async () => {

@@ -1,5 +1,5 @@
 export const MUSIC_PREFERENCE_KEY = 'flappy-music-enabled';
-export const MASTER_MUSIC_VOLUME = 0.28;
+export const MASTER_MUSIC_VOLUME = 0.50;
 
 // "Skyline Skip" — an original 32-step C-major WebAudio loop composed for this game.
 const MELODY = [72, 76, 79, 76, 74, 77, 81, 77, 72, 76, 79, 83, 81, 79, 77, 74,
@@ -44,13 +44,15 @@ export class Music {
     this.timer = null;
     this.started = false;
     this.interacted = false;
+    this.paused = false;
+    this.hidden = false;
     this.step = 0;
     this.nextStepAt = 0;
   }
 
   async startFromInteraction() {
     this.interacted = true;
-    if (!this.enabled) return false;
+    if (!this.enabled || this.paused || this.hidden) return false;
     if (this.context?.state === 'closed') {
       this.context = null;
       this.master = null;
@@ -88,14 +90,30 @@ export class Music {
     return this.enabled;
   }
 
+  async setPaused(paused) {
+    this.paused = Boolean(paused);
+    if (this.paused) {
+      if (!this.context || !this.interacted) return false;
+      try {
+        await this.context.suspend?.();
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    if (this.enabled && this.interacted && !this.hidden) return this.startFromInteraction();
+    return false;
+  }
+
   async handleVisibility(hidden) {
+    this.hidden = Boolean(hidden);
     if (!this.context || !this.interacted) return false;
     try {
-      if (hidden) {
+      if (this.hidden) {
         await this.context.suspend?.();
         return true;
       }
-      if (this.enabled) return this.startFromInteraction();
+      if (this.enabled && !this.paused) return this.startFromInteraction();
     } catch {
       return false;
     }

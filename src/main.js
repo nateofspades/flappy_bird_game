@@ -142,10 +142,14 @@ function updateMusicUi() {
 }
 
 function begin() {
-  void music.startFromInteraction();
-  if (game.state === 'paused') game.resume();
-  else if (game.state === 'gameover') game.restart();
-  else game.start();
+  if (game.state === 'paused') {
+    game.resume();
+    void music.setPaused(false);
+  } else {
+    void music.startFromInteraction();
+    if (game.state === 'gameover') game.restart();
+    else game.start();
+  }
   if (new URLSearchParams(location.search).get('fixture') === 'loss') game.gameOver();
   render();
 }
@@ -157,11 +161,18 @@ function flapOrStart() {
 }
 
 actionButton.addEventListener('click', begin);
-pauseButton.addEventListener('click', () => {
-  void music.startFromInteraction();
-  game.state === 'paused' ? game.resume() : game.pause();
+function togglePause() {
+  if (game.state === 'paused') {
+    game.resume();
+    void music.setPaused(false);
+  } else {
+    game.pause();
+    void music.setPaused(true);
+  }
   render();
-});
+}
+
+pauseButton.addEventListener('click', togglePause);
 musicButton.addEventListener('click', async () => {
   await music.setEnabled(!music.enabled);
   updateMusicUi();
@@ -169,11 +180,15 @@ musicButton.addEventListener('click', async () => {
 canvas.addEventListener('pointerdown', event => { event.preventDefault(); flapOrStart(); });
 window.addEventListener('keydown', event => {
   if (event.code === 'Space') { event.preventDefault(); flapOrStart(); }
-  if (event.code === 'KeyP' && (game.state === 'playing' || game.state === 'paused')) { game.state === 'paused' ? game.resume() : game.pause(); render(); }
+  if (event.code === 'KeyP' && (game.state === 'playing' || game.state === 'paused')) togglePause();
 });
 function handleVisibility(forceHidden = document.hidden) {
   void music.handleVisibility(forceHidden);
-  if (forceHidden && (game.state === 'playing' || game.state === 'countdown')) { game.pause(); render(); }
+  if (forceHidden && (game.state === 'playing' || game.state === 'countdown')) {
+    game.pause();
+    void music.setPaused(true);
+    render();
+  }
 }
 document.addEventListener('visibilitychange', () => handleVisibility());
 

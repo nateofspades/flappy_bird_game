@@ -123,9 +123,58 @@ test('touch starts, flaps, and leaves the mobile page fixed', async ({ browser, 
   const musicOn = await page.getByRole('button', { name: 'Turn music on' }).boundingBox();
   await page.touchscreen.tap(musicOn.x + musicOn.width / 2, musicOn.y + musicOn.height / 2);
   await expect.poll(() => page.evaluate(() => window.__flappy.music.master.gain.value)).toBeCloseTo(MASTER_MUSIC_VOLUME);
+
+  await page.evaluate(() => {
+    window.__touchPauseContext = window.__flappy.music.context;
+  });
+  const pause = await page.getByRole('button', { name: 'Pause game' }).boundingBox();
+  await page.touchscreen.tap(pause.x + pause.width / 2, pause.y + pause.height / 2);
+  await expect(page.locator('#app')).toHaveAttribute('data-state', 'paused');
+  await expect.poll(() => page.evaluate(() => window.__flappy.music.context.state)).toBe('suspended');
+  const pausedAt = await page.evaluate(() => window.__flappy.music.context.currentTime);
+  await page.waitForTimeout(200);
+  expect(await page.evaluate(position => Math.abs(window.__flappy.music.context.currentTime - position), pausedAt)).toBeLessThan(0.01);
+
+  const resume = await page.locator('#pause-button').boundingBox();
+  await page.touchscreen.tap(resume.x + resume.width / 2, resume.y + resume.height / 2);
+  await expect(page.locator('#app')).toHaveAttribute('data-state', 'playing');
+  await expect.poll(() => page.evaluate(() => window.__flappy.music.context.state)).toBe('running');
+  expect(await page.evaluate(() => window.__flappy.music.context === window.__touchPauseContext)).toBe(true);
+  await expect.poll(() => page.evaluate(position => window.__flappy.music.context.currentTime > position, pausedAt)).toBe(true);
   expect(runtime.errors).toEqual([]);
   expect(runtime.failures).toEqual([]);
   await context.close();
+});
+
+test('primary resume action restarts music after pausing with the control', async ({ page }) => {
+  await page.goto('/?test=1');
+  await begin(page);
+  await page.getByRole('button', { name: 'Pause game' }).click();
+  await expect.poll(() => page.evaluate(() => window.__flappy.music.context.state)).toBe('suspended');
+
+  await page.locator('#start-button').click();
+
+  await expect(page.locator('#app')).toHaveAttribute('data-state', 'playing');
+  await expect.poll(() => page.evaluate(() => window.__flappy.music.context.state)).toBe('running');
+});
+
+test('keyboard pause and resume control the same music transport', async ({ page }) => {
+  await page.goto('/?test=1');
+  await begin(page);
+  await page.evaluate(() => { window.__keyboardPauseContext = window.__flappy.music.context; });
+
+  await page.keyboard.press('KeyP');
+  await expect(page.locator('#app')).toHaveAttribute('data-state', 'paused');
+  await expect.poll(() => page.evaluate(() => window.__flappy.music.context.state)).toBe('suspended');
+  const pausedAt = await page.evaluate(() => window.__flappy.music.context.currentTime);
+  await page.waitForTimeout(200);
+  expect(await page.evaluate(position => Math.abs(window.__flappy.music.context.currentTime - position), pausedAt)).toBeLessThan(0.01);
+
+  await page.keyboard.press('KeyP');
+  await expect(page.locator('#app')).toHaveAttribute('data-state', 'playing');
+  await expect.poll(() => page.evaluate(() => window.__flappy.music.context.state)).toBe('running');
+  expect(await page.evaluate(() => window.__flappy.music.context === window.__keyboardPauseContext)).toBe(true);
+  await expect.poll(() => page.evaluate(position => window.__flappy.music.context.currentTime > position, pausedAt)).toBe(true);
 });
 
 test('music toggle persists and starts later without duplicate instances', async ({ page }) => {
@@ -171,6 +220,8 @@ test('visibility and browser audio interruptions resume the same loop', async ({
   await expect(page.locator('#app')).toHaveAttribute('data-state', 'paused');
   await expect.poll(() => page.evaluate(() => window.__flappy.music.context.state)).toBe('suspended');
   await page.evaluate(() => window.__flappy.handleVisibility(false));
+  await expect.poll(() => page.evaluate(() => window.__flappy.music.context.state)).toBe('suspended');
+  await page.locator('#start-button').click();
   await expect.poll(() => page.evaluate(() => window.__flappy.music.context.state)).toBe('running');
   expect(await page.evaluate(() => window.__flappy.music.context === window.__musicContext)).toBe(true);
 });
