@@ -119,7 +119,7 @@ test('touch starts, flaps, and leaves the mobile page fixed', async ({ browser, 
 
   const musicOff = await page.getByRole('button', { name: 'Turn music off' }).boundingBox();
   await page.touchscreen.tap(musicOff.x + musicOff.width / 2, musicOff.y + musicOff.height / 2);
-  expect(await page.evaluate(() => window.__flappy.music.master.gain.value)).toBe(0);
+  await expect.poll(() => page.evaluate(() => window.__flappy.music.master.gain.value)).toBe(0);
   const musicOn = await page.getByRole('button', { name: 'Turn music on' }).boundingBox();
   await page.touchscreen.tap(musicOn.x + musicOn.width / 2, musicOn.y + musicOn.height / 2);
   await expect.poll(() => page.evaluate(() => window.__flappy.music.master.gain.value)).toBeCloseTo(MASTER_MUSIC_VOLUME);
